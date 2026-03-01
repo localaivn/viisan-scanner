@@ -1,0 +1,13 @@
+[Unit]
+Description=Simple MJPEG Camera Server
+After=network.target
+
+[Service]
+User=admin
+WorkingDirectory=/home/admin/viisan-scanner
+ExecStart=/usr/bin/python3 /home/admin/viisan-scanner/mjpeg_server.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
