@@ -223,7 +223,7 @@ if ocr_btn:
                     base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
                 )
                 resp = client.chat.completions.create(
-                    model="qwen-vl-ocr-2025-11-20",
+                    model="qwen-vl-ocr",
                     messages=[{
                         "role": "user",
                         "content": [

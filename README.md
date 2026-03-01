@@ -248,4 +248,3 @@ sudo systemctl stop mjpeg-server.service
   - Bind Streamlit behind reverse proxy/auth
   - Firewall ports `8080` and `8501`
 - For unattended production, configure passwordless sudo for only required `systemctl` commands or refactor capture flow to avoid sudo.
-
