@@ -1,0 +1,301 @@
+/* ═══════════════════════════════════════════════
+   Scanner Preview - Main Stylesheet
+   TTAI Solutions Software
+═══════════════════════════════════════════════ */
+
+/* ─── Reset & Base ─────────────────────────────── */
+#MainMenu, header, footer {
+    visibility: hidden;
+}
+
+.block-container {
+    padding-top: 5px !important;
+    padding-bottom: 0px !important;
+    padding-left: 13px !important;
+    padding-right: 13px !important;
+}
+
+/* Màu nền toàn app → silver */
+.stApp {
+    background-color: #b0b8c1 !important;
+}
+
+/* Nền sidebar (nếu có) */
+section[data-testid="stSidebar"] {
+    background-color: #9aa3ad !important;
+}
+
+/* ─── App Header ────────────────────────────────── */
+.app-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0 6px 0;
+    border-bottom: 2px solid #8a9299;
+    margin-bottom: 10px;
+}
+
+.app-header h1 {
+    font-size: 1.2rem;
+    margin: 0;
+    color: #1a1a2e;
+    font-weight: 700;
+}
+
+.app-header-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+/* ─── Live Badge ────────────────────────────────── */
+.live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #ff4b4b;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    user-select: none;
+}
+
+.live-dot {
+    width: 7px;
+    height: 7px;
+    background: white;
+    border-radius: 50%;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.2; }
+}
+
+/* ─── Preview Box ───────────────────────────────── */
+.preview-box {
+    background: #c0c0c0;
+    border-radius: 10px;
+    padding: 6px;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    height: 780px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.preview-box img {
+    border-radius: 6px;
+    max-width: 100%;
+    max-height: 768px;
+    object-fit: contain;
+}
+
+.preview-info {
+    font-size: 0.72rem;
+    color: #555;
+    margin-top: 5px;
+    text-align: center;
+}
+
+.preview-info code {
+    background: #000;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+}
+
+/* ─── Info Card ─────────────────────────────────── */
+.info-card {
+    background: #dde1e5;
+    border-left: 3px solid #4a90d9;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 0.78rem;
+    color: #333;
+    margin-bottom: 8px;
+    line-height: 1.7;
+}
+
+.info-card b {
+    color: #1a1a2e;
+}
+
+/* ─── Control Panel (cột phải) ──────────────────── */
+.control-panel {
+    background: #c8cdd2;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.control-section-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 8px 0 4px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.control-divider {
+    border: none;
+    border-top: 1px solid #9aa3ad;
+    margin: 6px 0;
+}
+
+/* ─── Streamlit Widgets Override ────────────────── */
+
+/* Slider */
+.stSlider label,
+.stSlider [data-testid="stWidgetLabel"] {
+    font-size: 0.82rem !important;
+    color: #1a1a2e !important;
+    font-weight: 600;
+}
+
+/* Text input */
+.stTextInput label,
+.stTextInput [data-testid="stWidgetLabel"] {
+    font-size: 0.82rem !important;
+    color: #1a1a2e !important;
+    font-weight: 600;
+}
+
+.stTextInput input {
+    background: #eef0f2 !important;
+    border: 1px solid #9aa3ad !important;
+    border-radius: 6px !important;
+    font-size: 0.85rem !important;
+    color: #1a1a2e !important;
+}
+
+.stTextInput input:focus {
+    border-color: #4a90d9 !important;
+    box-shadow: 0 0 0 2px rgba(74,144,217,0.25) !important;
+}
+
+/* Textarea (OCR result) */
+.stTextArea label,
+.stTextArea [data-testid="stWidgetLabel"] {
+    font-size: 0.82rem !important;
+    color: #1a1a2e !important;
+    font-weight: 600;
+}
+
+.stTextArea textarea {
+    background: #eef0f2 !important;
+    border: 1px solid #9aa3ad !important;
+    border-radius: 6px !important;
+    font-size: 0.85rem !important;
+    font-family: 'Segoe UI', sans-serif !important;
+    line-height: 1.6 !important;
+    color: #1a1a2e !important;
+}
+
+/* ─── Buttons ───────────────────────────────────── */
+
+/* Primary action button (Capture, OCR) */
+div[data-testid="stButton"] > button {
+    width: 100%;
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    color: white;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 8px 0;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-bottom: 4px;
+    letter-spacing: 0.3px;
+}
+
+div[data-testid="stButton"] > button:hover {
+    opacity: 0.88;
+    transform: translateY(-1px);
+}
+
+div[data-testid="stButton"] > button:active {
+    transform: translateY(0px);
+}
+
+div[data-testid="stButton"] > button:disabled {
+    background: #9aa3ad !important;
+    cursor: not-allowed;
+    opacity: 0.7;
+    transform: none;
+}
+
+/* Download button (green) */
+div[data-testid="stDownloadButton"] > button {
+    width: 100%;
+    background: linear-gradient(135deg, #2e7d32, #1b5e20);
+    color: white;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 8px 0;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-bottom: 4px;
+}
+
+div[data-testid="stDownloadButton"] > button:hover {
+    opacity: 0.88;
+    transform: translateY(-1px);
+}
+
+/* ─── Alert / Status Messages ───────────────────── */
+div[data-testid="stAlert"] {
+    border-radius: 8px !important;
+    font-size: 0.85rem !important;
+}
+
+/* Success */
+div[data-testid="stAlert"][data-baseweb="notification"] {
+    background: #e8f5e9 !important;
+}
+
+/* ─── Progress Bar ──────────────────────────────── */
+div[data-testid="stProgress"] > div {
+    border-radius: 6px !important;
+}
+
+div[data-testid="stProgress"] [role="progressbar"] {
+    background: linear-gradient(90deg, #1a73e8, #4a90d9) !important;
+    border-radius: 6px !important;
+}
+
+/* ─── Expander ──────────────────────────────────── */
+details[data-testid="stExpander"] {
+    background: #dde1e5 !important;
+    border: 1px solid #9aa3ad !important;
+    border-radius: 8px !important;
+    font-size: 0.82rem !important;
+}
+
+/* ─── Footer ────────────────────────────────────── */
+.footer {
+    text-align: center;
+    color: #666;
+    font-size: 0.68rem;
+    padding-top: 6px;
+    border-top: 1px solid #9aa3ad;
+    margin-top: 8px;
+}
+
+.footer a {
+    color: #4a90d9;
+    text-decoration: none;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}

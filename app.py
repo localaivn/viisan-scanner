@@ -28,108 +28,19 @@ CAPTURE_HEIGHT = 2448
 SAVE_DIR       = "captures"
 OCR_MAX_WIDTH  = 1600
 OCR_MAX_HEIGHT = 1200
+CSS_FILE       = "static/style.css"
 
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # ─── Page config ──────────────────────────────────────────
-st.set_page_config(page_title="Scanner Preview", page_icon="📷", layout="wide")
+st.set_page_config(page_title="Scanner Preview and OCR", page_icon="📷", layout="wide")
 
-# ─── CSS ──────────────────────────────────────────────────
-st.markdown("""
-<style>
-    /* Ẩn header/footer mặc định của Streamlit */
-    #MainMenu, header, footer { visibility: hidden; }
+# ─── Load CSS từ file ─────────────────────────────────────
+def load_css(path: str):
+    with open(path, "r") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-    /* Giảm padding mặc định */
-    .block-container {
-        padding-top: 10px !important;
-        padding-bottom: 0px !important;
-        padding-left: 24px !important;
-        padding-right: 24px !important;
-    }
-
-    /* App header */
-    .app-header {
-        display: flex; align-items: center; gap: 10px;
-        padding: 4px 0 6px 0;
-        border-bottom: 2px solid #e0e0e0;
-        margin-bottom: 10px;
-    }
-    .app-header h1 { font-size: 1.2rem; margin: 0; color: #1a1a2e; }
-
-    .live-badge {
-        display: inline-flex; align-items: center; gap: 5px;
-        background: #ff4b4b; color: white;
-        font-size: 0.7rem; font-weight: 700;
-        padding: 2px 8px; border-radius: 20px; letter-spacing: 1px;
-    }
-    .live-dot {
-        width: 7px; height: 7px; background: white;
-        border-radius: 50%; animation: blink 1s infinite;
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-
-    /* Preview box */
-    .preview-box {
-        background: #0d0d0d; border-radius: 10px; padding: 6px;
-        text-align: center; box-shadow: 0 3px 12px rgba(0,0,0,0.3);
-    }
-    .preview-box img { border-radius: 6px; width: 100%; height: 100%; object-fit: contain; }
-
-    /* Info nhỏ dưới preview */
-    .info-small {
-        font-size: 0.72rem; color: #888; margin-top: 4px; text-align: center;
-    }
-
-    /* Card thông tin bên phải */
-    .info-card {
-        background: #f8f9fa; border-left: 3px solid #4a90d9;
-        border-radius: 6px; padding: 7px 10px;
-        font-size: 0.78rem; color: #444; margin-bottom: 8px;
-    }
-
-    /* Buttons */
-    div[data-testid="stButton"] > button {
-        width: 100%;
-        background: linear-gradient(135deg, #1a73e8, #0d47a1);
-        color: white; font-size: 0.88rem; font-weight: 600;
-        padding: 8px 0; border: none; border-radius: 8px;
-        cursor: pointer; transition: opacity 0.2s;
-        margin-bottom: 2px;
-    }
-    div[data-testid="stButton"] > button:hover { opacity: 0.85; }
-    div[data-testid="stButton"] > button:disabled {
-        background: #b0bec5 !important; cursor: not-allowed;
-    }
-
-    /* Slider label nhỏ lại */
-    .stSlider label { font-size: 0.82rem !important; }
-
-    /* Input label */
-    .stTextInput label { font-size: 0.82rem !important; }
-
-    /* OCR textarea */
-    .stTextArea textarea {
-        font-size: 0.85rem;
-        font-family: 'Segoe UI', sans-serif;
-        line-height: 1.6;
-    }
-
-    /* Download button */
-    div[data-testid="stDownloadButton"] > button {
-        width: 100%;
-        background: linear-gradient(135deg, #2e7d32, #1b5e20);
-        color: white; font-size: 0.88rem; font-weight: 600;
-        padding: 8px 0; border: none; border-radius: 8px;
-    }
-
-    /* Footer */
-    .footer {
-        text-align: center; color: #bbb; font-size: 0.68rem;
-        padding-top: 4px; border-top: 1px solid #eee; margin-top: 6px;
-    }
-</style>
-""", unsafe_allow_html=True)
+load_css(CSS_FILE)
 
 # ─── Session state ────────────────────────────────────────
 if "captured_file" not in st.session_state:
@@ -140,22 +51,21 @@ if "ocr_text" not in st.session_state:
 # ─── Header ───────────────────────────────────────────────
 st.markdown("""
 <div class="app-header">
-    <span style="font-size:1.5rem;">📷</span>
-    <h1>Scanner Preview &amp; Capture</h1>
+    <span class="app-header-icon">📷</span>
+    <h1>Scanner Preview &amp; OCR</h1>
     <span class="live-badge"><span class="live-dot"></span>LIVE</span>
 </div>
 """, unsafe_allow_html=True)
 
-# ─── Layout chính: preview | controls ─────────────────────
+# ─── Layout chính ─────────────────────────────────────────
 col_preview, col_ctrl = st.columns([3, 1], gap="medium")
 
 with col_preview:
-    # Preview chiếm toàn bộ chiều cao còn lại (~780px sau header)
     st.markdown(f"""
-    <div class="preview-box" style="height: 780px;">
-        <img src="{MJPEG_URL}" alt="Live Preview" style="max-height:768px;">
+    <div class="preview-box">
+        <img src="{MJPEG_URL}" alt="Live Preview">
     </div>
-    <div class="info-small">
+    <div class="preview-info">
         🌐 <code>{MJPEG_URL}</code> &nbsp;|&nbsp; 📹 <code>{DEVICE}</code>
     </div>
     """, unsafe_allow_html=True)
@@ -164,9 +74,9 @@ with col_ctrl:
     # ── Thông số ──
     st.markdown(f"""
     <div class="info-card">
-        📐 <b>{CAPTURE_WIDTH} × {CAPTURE_HEIGHT}</b> px<br>
-        🔍 OCR: <b>{OCR_MAX_WIDTH} × {OCR_MAX_HEIGHT}</b> px<br>
-        💾 <b>{SAVE_DIR}/</b>
+        📐 Capture: <b>{CAPTURE_WIDTH} × {CAPTURE_HEIGHT}</b> px<br>
+        🔍 OCR input: <b>{OCR_MAX_WIDTH} × {OCR_MAX_HEIGHT}</b> px<br>
+        💾 Save: <b>{SAVE_DIR}/</b>
     </div>
     """, unsafe_allow_html=True)
 
@@ -178,7 +88,7 @@ with col_ctrl:
 
     # ── API Key ──
     api_key = st.text_input(
-        "🔑 API Key", type="password", placeholder="sk-..."
+        "🔑 DashScope API Key", type="password", placeholder="sk-..."
     )
 
     st.markdown("<div style='margin-top:6px'></div>", unsafe_allow_html=True)
@@ -186,13 +96,13 @@ with col_ctrl:
     # ── Nút Capture ──
     capture_btn = st.button("📸 Capture Full Resolution")
 
-    # ── Nút Download ảnh (chỉ hiện khi có file) ──
+    # ── Nút Download ảnh ──
     if st.session_state.captured_file and os.path.exists(st.session_state.captured_file):
         fname = os.path.basename(st.session_state.captured_file)
         with open(st.session_state.captured_file, "rb") as f:
             st.download_button(
-                f"⬇️ Download  {fname}",
-                f, file_name=fname, mime="image/jpeg"
+                f"⬇️ {fname}", f,
+                file_name=fname, mime="image/jpeg"
             )
 
     # ── Nút OCR ──
@@ -204,18 +114,18 @@ with col_ctrl:
 
     # ── OCR result + Download docx ──
     if st.session_state.ocr_text:
-        st.markdown("<div style='margin-top:6px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:4px'></div>", unsafe_allow_html=True)
         edited_text = st.text_area(
             "📄 OCR Result",
             value=st.session_state.ocr_text,
             height=340,
         )
 
-        # Build docx
         base_name = os.path.splitext(
             os.path.basename(st.session_state.captured_file)
         )[0]
         docx_path = f"{SAVE_DIR}/{base_name}_ocr.docx"
+
         doc = DocxDocument()
         doc.add_heading("OCR Result", level=1)
         doc.add_paragraph(f"Source: {os.path.basename(st.session_state.captured_file)}")
@@ -235,7 +145,10 @@ with col_ctrl:
 
     # ── Footer ──
     st.markdown("""
-    <div class="footer">Scanner Preview v1.2 &nbsp;|&nbsp; TTAI Solutions</div>
+    <div class="footer">
+        Scanner Preview v1.2 &nbsp;|&nbsp;
+        <a href="https://ttaisolutions.com" target="_blank">TTAI Solutions Software</a>
+    </div>
     """, unsafe_allow_html=True)
 
 # ─── Capture logic ────────────────────────────────────────
