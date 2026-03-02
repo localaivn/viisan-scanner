@@ -1,0 +1,1 @@
+/usr/bin/c++  -std=c++11 -Wl,--allow-shlib-undefined -O3 -DNDEBUG -Wl,-Bsymbolic CMakeFiles/llm.dir/src/llm.cpp.o -o llm  -Wl,-rpath,/home/admin/viisan-scanner/app/3rdparty/librknnrt/Linux/rkllm-runtime/Linux/librkllm_api/aarch64: ../3rdparty/librknnrt/Linux/rkllm-runtime/Linux/librkllm_api/aarch64/librkllmrt.so 
