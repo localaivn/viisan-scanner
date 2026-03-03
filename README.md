@@ -175,18 +175,17 @@ sudo systemctl status viisan-scanner.service
 
 ## 7) OCR configuration
 
-In the app UI:
-
-1. Enter **DashScope API Key** in the key field.
-2. Capture an image.
-3. Click **Run OCR → .docx**.
+In the app UI, click Setting then Enter **DashScope API Key** in the key field, save and start capture
+1. Capture an image, download it if needed
+2. Convert to PDF, download it if needed
+3. Click **Run OCR → .docx**, check text in textarea file, download `.docx` file if needed
 
 Implementation details:
 
 - Uses OpenAI Python SDK with custom `base_url`:
   - `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
 - Model configured in code:
-  - `qwen-vl-ocr-2025-11-20`
+  - `qwen-vl-ocr`
 
 ---
 
