@@ -207,9 +207,9 @@ div[data-testid="stButton"] > button {
     color: white;
     font-size: 0.88rem;
     font-weight: 600;
-    padding: 8px 0;
-    border: none;
-    border-radius: 8px;
+    padding: 8px 8px;
+    border: 1px;
+    border-radius: 1px;
     cursor: pointer;
     transition: opacity 0.2s, transform 0.1s;
     margin-bottom: 4px;
@@ -239,9 +239,9 @@ div[data-testid="stDownloadButton"] > button {
     color: white;
     font-size: 0.88rem;
     font-weight: 600;
-    padding: 8px 0;
-    border: none;
-    border-radius: 8px;
+    padding: 8px 8px;
+    border: 1px;
+    border-radius: 1px;
     cursor: pointer;
     transition: opacity 0.2s, transform 0.1s;
     margin-bottom: 4px;

@@ -9,6 +9,10 @@ from openai import OpenAI
 from docx import Document as DocxDocument
 from docx.shared import Pt
 import cv2
+import numpy as np
+from PIL import Image
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas as pdf_canvas
 
 # ─── Config ───────────────────────────────────────────────
 def get_local_ip():
@@ -33,26 +37,153 @@ CSS_FILE       = "static/style.css"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # ─── Page config ──────────────────────────────────────────
-st.set_page_config(page_title="Scanner Preview and OCR", page_icon="📷", layout="wide")
+st.set_page_config(page_title="Scanner Preview", page_icon="📷", layout="wide")
 
-# ─── Load CSS từ file ─────────────────────────────────────
+# ─── Load CSS ─────────────────────────────────────────────
 def load_css(path: str):
     with open(path, "r") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 load_css(CSS_FILE)
 
+# ─── PDF conversion ───────────────────────────────────────
+def crop_document_border(img_bgr: np.ndarray) -> np.ndarray:
+    """
+    Tự động phát hiện viền giấy và crop sát nội dung.
+    Dùng Canny + findContours để tìm contour lớn nhất (tờ giấy).
+    Fallback về ảnh gốc nếu không tìm thấy.
+    """
+    orig = img_bgr.copy()
+    h, w = img_bgr.shape[:2]
+
+    # Resize nhỏ để xử lý nhanh
+    scale  = 800 / max(h, w)
+    small  = cv2.resize(img_bgr, (int(w * scale), int(h * scale)))
+    gray   = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
+    blur   = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges  = cv2.Canny(blur, 50, 150)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    edges  = cv2.dilate(edges, kernel)
+
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return orig
+
+    # Lấy contour lớn nhất
+    largest = max(contours, key=cv2.contourArea)
+
+    # Cần contour đủ lớn (> 20% diện tích ảnh)
+    if cv2.contourArea(largest) < 0.20 * small.shape[0] * small.shape[1]:
+        return orig
+
+    # Xấp xỉ thành tứ giác
+    peri   = cv2.arcLength(largest, True)
+    approx = cv2.approxPolyDP(largest, 0.02 * peri, True)
+
+    if len(approx) == 4:
+        # Perspective transform
+        pts = approx.reshape(4, 2).astype(np.float32) / scale
+
+        # Sắp xếp: top-left, top-right, bottom-right, bottom-left
+        s    = pts.sum(axis=1)
+        diff = np.diff(pts, axis=1)
+        rect = np.array([
+            pts[np.argmin(s)],
+            pts[np.argmin(diff)],
+            pts[np.argmax(s)],
+            pts[np.argmax(diff)],
+        ], dtype=np.float32)
+
+        wA = np.linalg.norm(rect[2] - rect[3])
+        wB = np.linalg.norm(rect[1] - rect[0])
+        hA = np.linalg.norm(rect[1] - rect[2])
+        hB = np.linalg.norm(rect[0] - rect[3])
+        dw = int(max(wA, wB))
+        dh = int(max(hA, hB))
+
+        if dw < 100 or dh < 100:
+            return orig
+
+        dst = np.array([
+            [0, 0], [dw - 1, 0],
+            [dw - 1, dh - 1], [0, dh - 1]
+        ], dtype=np.float32)
+
+        M       = cv2.getPerspectiveTransform(rect, dst)
+        warped  = cv2.warpPerspective(orig, M, (dw, dh))
+        return warped
+    else:
+        # Không phải tứ giác → dùng bounding rect
+        x, y, bw, bh = cv2.boundingRect(largest)
+        # Scale về ảnh gốc
+        x  = int(x  / scale); y  = int(y  / scale)
+        bw = int(bw / scale); bh = int(bh / scale)
+        # Thêm padding nhỏ
+        pad = 10
+        x1 = max(0, x - pad);  y1 = max(0, y - pad)
+        x2 = min(w, x + bw + pad); y2 = min(h, y + bh + pad)
+        return orig[y1:y2, x1:x2]
+
+
+def image_to_pdf(src_path: str, crop_border: bool = True) -> str:
+    """
+    Chuyển ảnh sang PDF khổ A4, căn giữa, giữ tỉ lệ.
+    Nếu crop_border=True thì tự động cắt viền giấy trước.
+    Trả về đường dẫn file PDF.
+    """
+    img_bgr = cv2.imread(src_path)
+
+    if crop_border:
+        img_bgr = crop_document_border(img_bgr)
+
+    # BGR → RGB rồi sang PIL
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    pil_img = Image.fromarray(img_rgb)
+
+    # Kích thước A4 theo point (1 inch = 72pt, A4 = 210×297mm)
+    a4_w, a4_h = A4          # (595.27, 841.89) pt
+    margin     = 28.35        # 10mm margin
+
+    avail_w = a4_w - 2 * margin
+    avail_h = a4_h - 2 * margin
+
+    img_w, img_h = pil_img.size
+    ratio  = min(avail_w / img_w, avail_h / img_h)
+    draw_w = img_w * ratio
+    draw_h = img_h * ratio
+
+    # Căn giữa
+    x_off = margin + (avail_w - draw_w) / 2
+    y_off = margin + (avail_h - draw_h) / 2
+
+    # Lưu ảnh tạm
+    base_name = os.path.splitext(os.path.basename(src_path))[0]
+    pdf_path  = f"{SAVE_DIR}/{base_name}.pdf"
+    tmp_img   = f"{SAVE_DIR}/_tmp_pdf.jpg"
+    pil_img.save(tmp_img, "JPEG", quality=92)
+
+    # Tạo PDF
+    c = pdf_canvas.Canvas(pdf_path, pagesize=A4)
+    c.drawImage(tmp_img, x_off, y_off, width=draw_w, height=draw_h)
+    c.save()
+
+    os.remove(tmp_img)
+    return pdf_path
+
+
 # ─── Session state ────────────────────────────────────────
 if "captured_file" not in st.session_state:
     st.session_state.captured_file = None
 if "ocr_text" not in st.session_state:
     st.session_state.ocr_text = None
+if "pdf_file" not in st.session_state:
+    st.session_state.pdf_file = None
 
 # ─── Header ───────────────────────────────────────────────
 st.markdown("""
 <div class="app-header">
     <span class="app-header-icon">📷</span>
-    <h1>Scanner Preview &amp; OCR</h1>
+    <h1>Scanner Preview &amp; Capture</h1>
     <span class="live-badge"><span class="live-dot"></span>LIVE</span>
 </div>
 """, unsafe_allow_html=True)
@@ -93,17 +224,34 @@ with col_ctrl:
 
     st.markdown("<div style='margin-top:6px'></div>", unsafe_allow_html=True)
 
-    # ── Nút Capture ──
-    capture_btn = st.button("📸 Capture Full Resolution")
+    # ── Nút Capture + Convert PDF cùng hàng ──
+    btn_col1, btn_col2 = st.columns(2, gap="small")
+    with btn_col1:
+        capture_btn = st.button("📸 Capture")
+    with btn_col2:
+        crop_border = st.checkbox("✂️ Crop border", value=True,
+                                  help="Tự động cắt viền & căn phối cảnh tờ giấy")
+        pdf_disabled = (
+            st.session_state.captured_file is None or
+            not os.path.exists(st.session_state.captured_file or "")
+        )
+        pdf_btn = st.button("📄 Convert to PDF", disabled=pdf_disabled)
 
-    # ── Nút Download ảnh ──
+    st.markdown("<div style='margin-top:2px'></div>", unsafe_allow_html=True)
+
+    # ── Download ảnh ──
     if st.session_state.captured_file and os.path.exists(st.session_state.captured_file):
         fname = os.path.basename(st.session_state.captured_file)
         with open(st.session_state.captured_file, "rb") as f:
-            st.download_button(
-                f"⬇️ {fname}", f,
-                file_name=fname, mime="image/jpeg"
-            )
+            st.download_button("⬇️ Download Image", f,
+                               file_name=fname, mime="image/jpeg")
+
+    # ── Download PDF ──
+    if st.session_state.pdf_file and os.path.exists(st.session_state.pdf_file):
+        with open(st.session_state.pdf_file, "rb") as f:
+            st.download_button("⬇️ Download PDF", f,
+                               file_name=os.path.basename(st.session_state.pdf_file),
+                               mime="application/pdf")
 
     # ── Nút OCR ──
     ocr_disabled = (
@@ -118,7 +266,7 @@ with col_ctrl:
         edited_text = st.text_area(
             "📄 OCR Result",
             value=st.session_state.ocr_text,
-            height=340,
+            height=280,
         )
 
         base_name = os.path.splitext(
@@ -146,7 +294,7 @@ with col_ctrl:
     # ── Footer ──
     st.markdown("""
     <div class="footer">
-        Scanner Preview v1.2 &nbsp;|&nbsp;
+        Scanner Preview v1.3 &nbsp;|&nbsp;
         <a href="https://ttaisolutions.com" target="_blank">TTAI Solutions Software</a>
     </div>
     """, unsafe_allow_html=True)
@@ -194,12 +342,27 @@ if capture_btn:
     if result.returncode == 0 and os.path.exists(filename):
         st.session_state.captured_file = filename
         st.session_state.ocr_text = None
+        st.session_state.pdf_file = None
         st.success(f"✅ Saved: `{os.path.basename(filename)}`")
         st.rerun()
     else:
         st.error("❌ Capture failed!")
         with st.expander("FFmpeg log"):
             st.code(result.stderr.decode(), language="bash")
+
+# ─── Convert to PDF logic ─────────────────────────────────
+if pdf_btn:
+    with st.spinner("📄 Converting to PDF..."):
+        try:
+            pdf_path = image_to_pdf(
+                st.session_state.captured_file,
+                crop_border=crop_border
+            )
+            st.session_state.pdf_file = pdf_path
+            st.success(f"✅ PDF: `{os.path.basename(pdf_path)}`")
+            st.rerun()
+        except Exception as e:
+            st.error(f"❌ Convert failed: {e}")
 
 # ─── OCR logic ────────────────────────────────────────────
 if ocr_btn:
@@ -223,7 +386,7 @@ if ocr_btn:
                     base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
                 )
                 resp = client.chat.completions.create(
-                    model="qwen-vl-ocr",
+                    model="qwen-vl-ocr-2025-11-20",
                     messages=[{
                         "role": "user",
                         "content": [
