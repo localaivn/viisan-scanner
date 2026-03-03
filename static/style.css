@@ -163,7 +163,7 @@ section[data-testid="stSidebar"] {
 .stTextInput label,
 .stTextInput [data-testid="stWidgetLabel"] {
     font-size: 0.82rem !important;
-    color: #1a1a2e !important;
+    color: #f0f0ff0 !important;
     font-weight: 600;
 }
 

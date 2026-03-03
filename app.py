@@ -186,7 +186,7 @@ def crop_document_border(img_bgr: np.ndarray) -> np.ndarray:
     else:
         # Không phải tứ giác → dùng bounding rect
         x, y, bw, bh = cv2.boundingRect(largest)
-        # Scale về ảnh gốc
+        # Scale về ảnh gốcW
         x  = int(x  / scale); y  = int(y  / scale)
         bw = int(bw / scale); bh = int(bh / scale)
         # Thêm padding nhỏ
@@ -289,7 +289,7 @@ def open_settings_dialog():
         st.rerun()
 
 # ─── Header ───────────────────────────────────────────────
-header_left, header_right = st.columns([12, 2], vertical_alignment="center")
+header_left, header_right = st.columns([6, 1], vertical_alignment="center")
 with header_left:
     st.markdown("""
     <div class="app-header">
@@ -299,7 +299,7 @@ with header_left:
     </div>
     """, unsafe_allow_html=True)
 with header_right:
-    if st.button("⚙️ Setting"):
+    if st.button("⚙ Cấu hình"):
         open_settings_dialog()
 
 # ─── Layout chính ─────────────────────────────────────────
