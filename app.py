@@ -33,6 +33,7 @@ SAVE_DIR       = "captures"
 OCR_MAX_WIDTH  = 1600
 OCR_MAX_HEIGHT = 1200
 CSS_FILE       = "static/style.css"
+ENV_FILE       = ".env"
 
 os.makedirs(SAVE_DIR, exist_ok=True)
 
@@ -45,6 +46,94 @@ def load_css(path: str):
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 load_css(CSS_FILE)
+
+
+def load_settings(path: str) -> tuple[str, str, list[str]]:
+    theme = "light"
+    api_key = ""
+    env_lines: list[str] = []
+
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            env_lines = f.readlines()
+
+        for raw_line in env_lines:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            clean_value = value.strip().strip('"').strip("'")
+            if key.strip() == "DASHSCOPE_API_KEY":
+                api_key = clean_value
+            elif key.strip() == "UI_THEME" and clean_value in {"light", "dark"}:
+                theme = clean_value
+
+    return theme, api_key, env_lines
+
+
+def save_settings(path: str, theme: str, api_key: str, env_lines: list[str]):
+    updates = {
+        "UI_THEME": theme,
+        "DASHSCOPE_API_KEY": api_key,
+    }
+    output = []
+    seen = set()
+
+    for raw_line in env_lines:
+        stripped = raw_line.strip()
+        if stripped and not stripped.startswith("#") and "=" in stripped:
+            key = stripped.split("=", 1)[0].strip()
+            if key in updates:
+                output.append(f"{key}={updates[key]}\n")
+                seen.add(key)
+                continue
+        output.append(raw_line)
+
+    for key, value in updates.items():
+        if key not in seen:
+            output.append(f"{key}={value}\n")
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.writelines(output)
+
+
+def apply_theme(theme: str):
+    modal_css = """
+    [data-testid="stDialog"] [role="dialog"] {
+        background: #ffffff !important;
+        color: #111111 !important;
+    }
+    [data-testid="stDialog"] [role="dialog"] * {
+        color: #111111 !important;
+    }
+    [data-testid="stDialog"] input,
+    [data-testid="stDialog"] textarea,
+    [data-testid="stDialog"] [data-baseweb="input"] > div {
+        background: #ffffff !important;
+        color: #111111 !important;
+    }
+    """
+
+    if theme == "dark":
+        css = f"""
+        <style>
+        .stApp {{background-color: #1e232a !important; color: #e6edf3 !important;}}
+        .app-header h1, .preview-info, .info-card, .footer {{color: #e6edf3 !important;}}
+        .info-card {{background: #2b313a !important; border-left-color: #63a4ff !important;}}
+        .preview-box {{background: #2b313a !important;}}
+        .preview-info code {{background: #11161d !important; color: #d7e2ee !important;}}
+        {modal_css}
+        </style>
+        """
+    else:
+        css = f"""
+        <style>
+        .stApp {{background-color: #b0b8c1 !important; color: #1a1a2e !important;}}
+        section[data-testid="stSidebar"] {{background-color: #9aa3ad !important;}}
+        {modal_css}
+        </style>
+        """
+    st.markdown(css, unsafe_allow_html=True)
 
 # ─── PDF conversion ───────────────────────────────────────
 def crop_document_border(img_bgr: np.ndarray) -> np.ndarray:
@@ -178,15 +267,58 @@ if "ocr_text" not in st.session_state:
     st.session_state.ocr_text = None
 if "pdf_file" not in st.session_state:
     st.session_state.pdf_file = None
+if "theme" not in st.session_state or "dashscope_api_key" not in st.session_state:
+    loaded_theme, loaded_api_key, loaded_env_lines = load_settings(ENV_FILE)
+    st.session_state.theme = loaded_theme
+    st.session_state.dashscope_api_key = loaded_api_key
+    st.session_state.env_lines = loaded_env_lines
+
+apply_theme(st.session_state.theme)
+
+
+@st.dialog("Settings")
+def open_settings_dialog():
+    theme_value = st.radio(
+        "Giao diện",
+        options=["light", "dark"],
+        horizontal=True,
+        format_func=lambda x: "Sáng" if x == "light" else "Tối",
+        index=0 if st.session_state.theme == "light" else 1,
+    )
+    api_key_value = st.text_input(
+        "🔑 DashScope API Key",
+        type="password",
+        value=st.session_state.dashscope_api_key,
+        placeholder="sk-...",
+    )
+
+    if st.button("💾 Lưu settings"):
+        save_settings(
+            ENV_FILE,
+            theme=theme_value,
+            api_key=api_key_value.strip(),
+            env_lines=st.session_state.env_lines,
+        )
+        updated_theme, updated_api_key, updated_env_lines = load_settings(ENV_FILE)
+        st.session_state.theme = updated_theme
+        st.session_state.dashscope_api_key = updated_api_key
+        st.session_state.env_lines = updated_env_lines
+        st.success("Đã lưu settings vào file .env")
+        st.rerun()
 
 # ─── Header ───────────────────────────────────────────────
-st.markdown("""
-<div class="app-header">
-    <span class="app-header-icon">📷</span>
-    <h1>Scanner Preview &amp; Capture</h1>
-    <span class="live-badge"><span class="live-dot"></span>LIVE</span>
-</div>
-""", unsafe_allow_html=True)
+header_left, header_right = st.columns([12, 2], vertical_alignment="center")
+with header_left:
+    st.markdown("""
+    <div class="app-header">
+        <span class="app-header-icon">📷</span>
+        <h1>Scanner Preview &amp; Capture</h1>
+        <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+    </div>
+    """, unsafe_allow_html=True)
+with header_right:
+    if st.button("⚙️ Setting"):
+        open_settings_dialog()
 
 # ─── Layout chính ─────────────────────────────────────────
 col_preview, col_ctrl = st.columns([3, 1], gap="medium")
@@ -215,11 +347,6 @@ with col_ctrl:
     exposure = st.slider(
         "☀️ Exposure", min_value=100, max_value=20000,
         value=12000, step=100, help="Cao hơn = sáng hơn"
-    )
-
-    # ── API Key ──
-    api_key = st.text_input(
-        "🔑 DashScope API Key", type="password", placeholder="sk-..."
     )
 
     st.markdown("<div style='margin-top:6px'></div>", unsafe_allow_html=True)
@@ -366,6 +493,7 @@ if pdf_btn:
 
 # ─── OCR logic ────────────────────────────────────────────
 if ocr_btn:
+    api_key = st.session_state.dashscope_api_key
     if not api_key:
         st.warning("⚠️ Nhập API Key trước khi chạy OCR.")
     else:
